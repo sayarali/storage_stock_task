@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:storage_stock_task/storage_page.dart';
+import 'package:storage_stock_task/screen/storage_page.dart';
 
 void main() {
   runApp(MyApp());
