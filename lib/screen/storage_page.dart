@@ -19,7 +19,7 @@ List<ItemModel> acilIlacItems = <ItemModel>[
   ItemModel("12374372", "Brufen 400mg tablet", DateTime.now(), 30, "https://cdn.hekimce.com/uploads/2022/basliksiz-1-1671678078.jpg"),
   ItemModel("12374372", "Majezik Duo 100mg/8mg film kaplı tablet", DateTime.now(), 33, "https://i2.gazetevatan.com/i/gazetevatan/75/1200x0/618701d745d2a06698464a8c.jpg"),
   ItemModel("12374372", "Nexium 40mg enterik kaplı pellet tablet", DateTime.now(), 65, ""),
-  ItemModel("12374372", "Rennie 680mg 48 çiğneme tableti", DateTime.now(), 24, "")
+  ItemModel("12374372", "Rennie 680mg 48 çiğneme tableti", DateTime.now(), 24, ""),
 ];
 StorageModel acilIlacDepo = StorageModel("Acil İlaç Deposu", acilIlacItems);
 
@@ -42,11 +42,12 @@ List<StorageModel> storageList = <StorageModel>[acilIlacDepo, mutfakDepo];
 
 class _StoragePageState extends State<StoragePage>{
 
-  bool fromBarcode = false;
 
 
 
   static StorageModel dropdownValue = storageList.first;
+  static StorageModel updateDropdownMenu = dropdownValue;
+
   List<ItemModel> filteredList = dropdownValue.items;
   @override
   void initState() {
@@ -95,7 +96,7 @@ class _StoragePageState extends State<StoragePage>{
         onChanged: (value) => filterItemList(dropdownValue.items, value),
         controller: searchController,
         decoration: InputDecoration(
-          border: UnderlineInputBorder(),
+          border: const UnderlineInputBorder(),
           hintText: "Depoda ürün ara",
           helperText: "Ürün ismi ya da barkod numarası",
           prefixIcon: const Icon(
@@ -124,6 +125,7 @@ class _StoragePageState extends State<StoragePage>{
     );
   }
 
+  int toUpdateInt = 0;
 
   Widget _itemsListView(List<ItemModel> itemList) {
     return ListView.builder(
@@ -159,8 +161,13 @@ class _StoragePageState extends State<StoragePage>{
           title: Text(itemList[index].itemName),
           trailing: Text("Stok: ${itemList[index].itemCount}"),
           onTap: () {
-            updateController.text = "";
+            updateController.text = itemList[index].itemCount.toString();
+            toUpdateInt = itemList[index].itemCount;
+            updateDropdownMenu = dropdownValue;
             _itemAlertDialog(itemList[index]);
+            setState(() {
+
+            });
           },
         );
       },
@@ -168,62 +175,13 @@ class _StoragePageState extends State<StoragePage>{
   }
 
 
-  Future<void> _itemAlertDialog(ItemModel itemModel) async {
+  Future<void> _deleteAlertDialog(ItemModel itemModel) async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          scrollable: true,
-          title: Image.network(
-            itemModel.itemImage,
-            width: 50,
-            height: 50,
-            errorBuilder: (BuildContext context, Object exception, StackTrace stackTrace) {
-              return const ImageIcon(
-                AssetImage("assets/no-photo.png"),
-                size: 50,
-
-              );
-            },
-          ),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: Text(
-                    itemModel.itemName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text("Son kullanma tarihi: "
-                      "${itemModel.itemExpiredDate.day}"
-                      "/${itemModel.itemExpiredDate.month}"
-                      "/${itemModel.itemExpiredDate.year}",
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text("Stok adedi: ${itemModel.itemCount}"),
-                ),
-                TextField(
-                  keyboardType: TextInputType.number,
-                  controller: updateController,
-                  decoration: const InputDecoration(
-                    hintText: "Stok güncelle"
-                  ),
-                )
-
-              ],
-            ),
-          ),
-          actions: <Widget>[
+          title: Text("Silmek istediğinize emin misiniz?"),
+          actions: [
             TextButton(
               child: const Text('İptal'),
               onPressed: () {
@@ -231,19 +189,15 @@ class _StoragePageState extends State<StoragePage>{
               },
             ),
             TextButton(
-              child: const Text('Tamam'),
+              child: const Text('Evet'),
               onPressed: () {
-                if(updateController.text != ""){
-                  try {
-                    setState(() {
-                      itemModel.itemCount = int.parse(updateController.text);
-                      Navigator.of(context).pop();
-                    });
-                  } catch(e) {
-                    print(e);
-                  }
+                itemModel.itemCount = 0;
+                deleteItem();
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+                setState(() {
 
-                }
+                });
               },
             ),
           ],
@@ -251,6 +205,242 @@ class _StoragePageState extends State<StoragePage>{
       }
     );
   }
+
+  Future<void> _itemAlertDialog(ItemModel itemModel) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: AlertDialog(
+            scrollable: true,
+            title: Image.network(
+              itemModel.itemImage,
+              width: 50,
+              height: 50,
+              errorBuilder: (BuildContext context, Object exception, StackTrace stackTrace) {
+                return const ImageIcon(
+                  AssetImage("assets/no-photo.png"),
+                  size: 50,
+
+                );
+              },
+            ),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Text(
+                      itemModel.itemName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: Text("Son kullanma tarihi: "
+                        "${itemModel.itemExpiredDate.day}"
+                        "/${itemModel.itemExpiredDate.month}"
+                        "/${itemModel.itemExpiredDate.year}",
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: Text("Stok adedi: ${itemModel.itemCount}"),
+                  ),
+                  const SizedBox(height: 15.0,),
+                  Container(
+                    alignment: Alignment.center,
+                    child: const Text(
+                      "Stok Güncelle",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w300,
+
+                      ),
+                    ),
+                  ),
+                  _updateStockWidget(itemModel),
+                  const SizedBox(height: 25.0,),
+                  _updateItemStorage(itemModel)
+
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              ElevatedButton.icon(
+                icon: const Icon(Icons.delete_forever),
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(Colors.red),
+                ),
+                onPressed: () {
+                  _deleteAlertDialog(itemModel);
+                },
+                label: const Text('Ürünü Sil'),
+              ),
+              TextButton(
+                child: const Text('İptal'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('Tamam'),
+                onPressed: () {
+                  if(updateController.text != ""){
+                    try {
+                      setState(() {
+                        if(int.parse(updateController.text) < 0){
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Stok sayısı negatif olamaz!"),)
+                          );
+                        }
+                        else {
+                          itemModel.itemCount = int.parse(updateController.text);
+                          if(updateController.text == "0") {
+                            deleteItem();
+                          }
+                          Navigator.of(context).pop();
+                        }
+
+                      });
+                      setState(() {
+
+                      });
+                    } catch(e) {
+                      print(e);
+                    }
+
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+
+  Widget _updateStockWidget(ItemModel itemModel) {
+    return Container(
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 50,
+            child: TextButton(
+              onPressed: () {
+                updateController.text = (toUpdateInt -= 5).toString();
+              },
+              child: const Text("-5"),
+            ),
+          ),
+          SizedBox(
+            width: 50,
+            child: TextButton(
+              onPressed: () {
+                updateController.text = (toUpdateInt -= 1).toString();
+              },
+              child: const Text("-1"),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: TextField(
+              controller: updateController,
+              decoration: const InputDecoration(
+                hintText: "5",
+              ),
+              textAlign: TextAlign.center,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 50,
+            child: TextButton(
+              onPressed: () {
+                updateController.text = (toUpdateInt += 1).toString();
+              },
+              child: const Text("+1"),
+            ),
+          ),
+          SizedBox(
+            width: 50,
+            child: TextButton(
+              onPressed: () {
+                updateController.text = (toUpdateInt += 5).toString();
+
+              },
+              child: const Text("+5"),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _updateItemStorage(ItemModel itemModel) {
+    return SizedBox(
+      child: Row(
+        children: [
+          const Text("Depoyu değiştir:   "),
+          SizedBox(
+            width: 135,
+            child: _updateStorageDropdown(itemModel),
+          )
+        ],
+      )
+    );
+  }
+
+  Widget _updateStorageDropdown(ItemModel itemModel){
+
+    return DropdownButton<StorageModel>(
+      value: updateDropdownMenu,
+      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+      elevation: 16,
+      style: const TextStyle(color: Colors.blueAccent),
+      menuMaxHeight: 300,
+      isExpanded: true,
+      itemHeight: 50.0,
+      underline: Container(
+        height: 2,
+        color: Colors.blueAccent,
+      ),
+      onChanged: (StorageModel value) {
+        print("onChanged:${value.storageName}");
+        updateDropdownMenu = value;
+        updateDropdownMenu.items.add(itemModel);
+        dropdownValue.items.remove(itemModel);
+        setState(() {
+
+        });
+
+      },
+      items: storageList.map<DropdownMenuItem<StorageModel>>((StorageModel value) {
+        return DropdownMenuItem<StorageModel>(
+          value: value,
+          child: Text(value.storageName),
+          onTap: () {
+            print("items:${value.storageName}");
+            setState(() {
+              updateDropdownMenu = value;
+            });
+          },
+        );
+      }).toList(),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -330,4 +520,12 @@ class _StoragePageState extends State<StoragePage>{
     });
   }
 
+  void deleteItem(){
+    setState(() {
+      filteredList.removeWhere((element) => element.itemCount == 0);
+      for(int i = 0; i<storageList.length; i++){
+        storageList[i].items.removeWhere((element) => element.itemCount == 0);
+      }
+    });
+  }
 }
