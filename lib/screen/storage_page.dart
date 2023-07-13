@@ -13,6 +13,7 @@ class StoragePage extends StatefulWidget {
 }
 
 
+
 List<ItemModel> acilIlacItems = <ItemModel>[
   ItemModel("12374372", "Parol 500mg tablet", DateTime.now(), 48, "https://www.haberlerdunya.com.tr/wp-content/uploads/2023/04/parol-agri-kesici-1024x562.webp"),
   ItemModel("12374372", "Brufen 400mg tablet", DateTime.now(), 30, "https://cdn.hekimce.com/uploads/2022/basliksiz-1-1671678078.jpg"),
@@ -28,7 +29,8 @@ List<ItemModel> mutfakItems = <ItemModel>[
   ItemModel("12374372", "Patates", DateTime.now(), 27, ""),
   ItemModel("12374372", "Biber", DateTime.now(), 46, ""),
   ItemModel("12374372", "Domates", DateTime.now(), 24, ""),
-  ItemModel("8697419970035", "Kalabak Su 0,5 Litre", DateTime.now(), 24, "")
+  ItemModel("8697419970035", "Kalabak Su 0,5 Litre", DateTime.now(), 24, ""),
+  ItemModel("86935241", "Sigara", DateTime.now(), 13, "")
 ];
 StorageModel mutfakDepo = StorageModel("Mutfak", mutfakItems);
 
@@ -141,6 +143,18 @@ class _StoragePageState extends State<StoragePage>{
 
               );
             },
+            loadingBuilder: (context, child, loadingProgress) {
+              if(loadingProgress == null) {
+                return child;
+              }
+
+              return CircularProgressIndicator(
+                value: (loadingProgress != null)
+                    ? (loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes)
+                    : 0,
+              );
+            },
           ),
           title: Text(itemList[index].itemName),
           trailing: Text("Stok: ${itemList[index].itemCount}"),
@@ -160,13 +174,39 @@ class _StoragePageState extends State<StoragePage>{
       builder: (BuildContext context) {
         return AlertDialog(
           scrollable: true,
-          title: Text(itemModel.itemName),
+          title: Image.network(
+            itemModel.itemImage,
+            width: 50,
+            height: 50,
+            errorBuilder: (BuildContext context, Object exception, StackTrace stackTrace) {
+              return const ImageIcon(
+                AssetImage("assets/no-photo.png"),
+                size: 50,
+
+              );
+            },
+          ),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
+                Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    itemModel.itemName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold
+                    ),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Text("Son kullanma tarihi: ${itemModel.itemExpiredDate}"),
+                  child: Text("Son kullanma tarihi: "
+                      "${itemModel.itemExpiredDate.day}"
+                      "/${itemModel.itemExpiredDate.month}"
+                      "/${itemModel.itemExpiredDate.year}",
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
@@ -284,8 +324,8 @@ class _StoragePageState extends State<StoragePage>{
     setState(() {
       filteredList = toFilterList.where(
               (element) => element.itemName.toLowerCase()
-              .contains(searchText.toLowerCase()) || element.itemBarcode.toLowerCase()
-              .contains(searchText.toLowerCase())
+              .contains(searchText.toLowerCase()) || element.itemBarcode
+              .contains(searchText)
       ).toList();
     });
   }
