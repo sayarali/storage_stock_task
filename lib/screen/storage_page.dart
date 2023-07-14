@@ -475,41 +475,45 @@ class _StoragePageState extends State<StoragePage>{
 
   Widget _updateStorageDropdown(ItemModel itemModel){
 
-    return DropdownButton<StorageModel>(
-      value: updateDropdownMenu,
-      icon: const Icon(Icons.keyboard_arrow_down_rounded),
-      elevation: 16,
-      style: const TextStyle(color: Colors.blueAccent),
-      menuMaxHeight: 300,
-      isExpanded: true,
-      itemHeight: 50.0,
-      underline: Container(
-        height: 2,
-        color: Colors.blueAccent,
-      ),
-      onChanged: (StorageModel value) {
-        print("onChanged:${value.storageName}");
-        updateDropdownMenu = value;
-        updateDropdownMenu.items.add(itemModel);
-        dropdownValue.items.remove(itemModel);
-        filteredList = dropdownValue.items;
-        setState(() {
+    return StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        return DropdownButton<StorageModel>(
+          value: updateDropdownMenu,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          elevation: 16,
+          style: const TextStyle(color: Colors.blueAccent),
+          menuMaxHeight: 300,
+          isExpanded: true,
+          itemHeight: 50.0,
+          underline: Container(
+            height: 2,
+            color: Colors.blueAccent,
+          ),
+          onChanged: (StorageModel value) {
+            print("onChanged:${value.storageName}");
 
-        });
-
-      },
-      items: storageList.map<DropdownMenuItem<StorageModel>>((StorageModel value) {
-        return DropdownMenuItem<StorageModel>(
-          value: value,
-          child: Text(value.storageName),
-          onTap: () {
-            print("items:${value.storageName}");
             setState(() {
               updateDropdownMenu = value;
+              updateDropdownMenu.items.add(itemModel);
+              dropdownValue.items.remove(itemModel);
+              filteredList = dropdownValue.items;
             });
+
           },
+          items: storageList.map<DropdownMenuItem<StorageModel>>((StorageModel value) {
+            return DropdownMenuItem<StorageModel>(
+              value: value,
+              child: Text(value.storageName),
+              onTap: () {
+                print("items:${value.storageName}");
+                setState(() {
+                  updateDropdownMenu = value;
+                });
+              },
+            );
+          }).toList(),
         );
-      }).toList(),
+      }
     );
   }
 
