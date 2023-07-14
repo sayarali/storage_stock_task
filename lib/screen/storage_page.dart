@@ -17,9 +17,9 @@ class StoragePage extends StatefulWidget {
 List<ItemModel> acilIlacItems = <ItemModel>[
   ItemModel("12374372", "Parol 500mg tablet", DateTime.now(), 48, "https://www.haberlerdunya.com.tr/wp-content/uploads/2023/04/parol-agri-kesici-1024x562.webp"),
   ItemModel("12374372", "Brufen 400mg tablet", DateTime.now(), 30, "https://cdn.hekimce.com/uploads/2022/basliksiz-1-1671678078.jpg"),
-  ItemModel("12374372", "Majezik Duo 100mg/8mg film kaplı tablet", DateTime.now(), 33, "https://i2.gazetevatan.com/i/gazetevatan/75/1200x0/618701d745d2a06698464a8c.jpg"),
+  ItemModel("12374372", "Majezik Duo 100mg/8mg film kaplı tablet", DateTime.now(), 0, "https://i2.gazetevatan.com/i/gazetevatan/75/1200x0/618701d745d2a06698464a8c.jpg"),
   ItemModel("12374372", "Nexium 40mg enterik kaplı pellet tablet", DateTime.now(), 65, ""),
-  ItemModel("12374372", "Rennie 680mg 48 çiğneme tableti", DateTime.now(), 24, ""),
+  ItemModel("12374372", "Rennie 680mg 48 çiğneme tableti", DateTime.now(), 0, ""),
 ];
 StorageModel acilIlacDepo = StorageModel("Acil İlaç Deposu", acilIlacItems);
 
@@ -49,8 +49,14 @@ class _StoragePageState extends State<StoragePage>{
   static StorageModel updateDropdownMenu = dropdownValue;
 
   List<ItemModel> filteredList = dropdownValue.items;
+
+  List<ItemModel> stockOutList= <ItemModel>[];
+  List<ItemModel> stockList = <ItemModel>[];
+
   @override
   void initState() {
+    filteredList = dropdownValue.items;
+    filteredListSeperate(filteredList);
     super.initState();
   }
 
@@ -74,6 +80,7 @@ class _StoragePageState extends State<StoragePage>{
           setState(() {
             dropdownValue = value;
             filteredList = value.items;
+            filteredListSeperate(filteredList);
           });
         },
         borderRadius: BorderRadius.circular(15.0),
@@ -127,7 +134,7 @@ class _StoragePageState extends State<StoragePage>{
 
   int toUpdateInt = 0;
 
-  Widget _itemsListView(List<ItemModel> itemList) {
+  Widget _stockItemsListView(List<ItemModel> itemList) {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -173,6 +180,73 @@ class _StoragePageState extends State<StoragePage>{
       },
     );
   }
+  Widget _stockOutItemsListView(List<ItemModel> itemList) {
+    if(itemList.isNotEmpty){
+      return Column(
+        children: [
+          Container(
+            alignment: Alignment.centerLeft,
+            child: const Text(
+              "Stoğu biten ürünler",
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w400
+              ),
+            ),
+          ),
+          const SizedBox(height: 10.0,),
+          ListView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: itemList.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                leading: Image.network(
+                  itemList[index].itemImage,
+                  width: 50,
+                  height: 50,
+                  errorBuilder: (BuildContext context, Object exception, StackTrace stackTrace) {
+                    return const ImageIcon(
+                      AssetImage("assets/no-photo.png"),
+                      size: 50,
+
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if(loadingProgress == null) {
+                      return child;
+                    }
+
+                    return CircularProgressIndicator(
+                      value: (loadingProgress != null)
+                          ? (loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes)
+                          : 0,
+                    );
+                  },
+                ),
+                title: Text(itemList[index].itemName),
+                trailing: Text("Stokta yok"),
+                onTap: () {
+                  updateController.text = itemList[index].itemCount.toString();
+                  toUpdateInt = itemList[index].itemCount;
+                  updateDropdownMenu = dropdownValue;
+                  _itemAlertDialog(itemList[index]);
+                  setState(() {
+
+                  });
+                },
+              );
+            },
+          ),
+        ],
+      );
+    }
+    else {
+      return const SizedBox();
+    }
+
+  }
 
 
   Future<void> _deleteAlertDialog(ItemModel itemModel) async {
@@ -191,8 +265,7 @@ class _StoragePageState extends State<StoragePage>{
             TextButton(
               child: const Text('Evet'),
               onPressed: () {
-                itemModel.itemCount = 0;
-                deleteItem();
+                deleteItem(itemModel);
                 Navigator.of(context).pop();
                 Navigator.of(context).pop();
                 setState(() {
@@ -285,6 +358,7 @@ class _StoragePageState extends State<StoragePage>{
               TextButton(
                 child: const Text('İptal'),
                 onPressed: () {
+                  filteredListSeperate(filteredList);
                   Navigator.of(context).pop();
                 },
               ),
@@ -301,9 +375,7 @@ class _StoragePageState extends State<StoragePage>{
                         }
                         else {
                           itemModel.itemCount = int.parse(updateController.text);
-                          if(updateController.text == "0") {
-                            deleteItem();
-                          }
+                          filteredListSeperate(filteredList);
                           Navigator.of(context).pop();
                         }
 
@@ -420,6 +492,7 @@ class _StoragePageState extends State<StoragePage>{
         updateDropdownMenu = value;
         updateDropdownMenu.items.add(itemModel);
         dropdownValue.items.remove(itemModel);
+        filteredList = dropdownValue.items;
         setState(() {
 
         });
@@ -492,7 +565,10 @@ class _StoragePageState extends State<StoragePage>{
                           ],
                         ),
                         const SizedBox(height: 15.0,),
-                        _itemsListView(filteredList)
+                        _stockItemsListView(stockList),
+                        const SizedBox(height: 25.0,),
+
+                        _stockOutItemsListView(stockOutList)
 
                       ],
                     ),
@@ -517,15 +593,24 @@ class _StoragePageState extends State<StoragePage>{
               .contains(searchText.toLowerCase()) || element.itemBarcode
               .contains(searchText)
       ).toList();
+      filteredListSeperate(filteredList);
     });
   }
 
-  void deleteItem(){
+
+  void filteredListSeperate(List<ItemModel> toFilterList) {
     setState(() {
-      filteredList.removeWhere((element) => element.itemCount == 0);
+      stockOutList = toFilterList.where((element) => element.itemCount == 0).toList();
+      stockList = toFilterList.where((element) => element.itemCount != 0).toList();
+    });
+  }
+
+  void deleteItem(ItemModel itemModel){
+    setState(() {
       for(int i = 0; i<storageList.length; i++){
-        storageList[i].items.removeWhere((element) => element.itemCount == 0);
+        storageList[i].items.remove(itemModel);
       }
+      filteredListSeperate(filteredList);
     });
   }
 }
