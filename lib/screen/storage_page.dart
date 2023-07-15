@@ -1,11 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:storage_stock_task/model/ItemModel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:storage_stock_task/model/item_model.dart';
 import 'package:storage_stock_task/model/storage_model.dart';
 
 
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:storage_stock_task/model/storages_model.dart';
 
 class StoragePage extends StatefulWidget {
   @override
@@ -38,7 +40,13 @@ StorageModel mutfakDepo = StorageModel("Mutfak", mutfakItems);
 List<StorageModel> storageList = <StorageModel>[acilIlacDepo, mutfakDepo];
 
 
-
+enum PopupItems {
+  name, expiredDateUp,
+  expiredDateDown,
+  barcode,
+  stockCountUp,
+  stockCountDown
+}
 
 class _StoragePageState extends State<StoragePage>{
 
@@ -53,10 +61,12 @@ class _StoragePageState extends State<StoragePage>{
   List<ItemModel> stockOutList= <ItemModel>[];
   List<ItemModel> stockList = <ItemModel>[];
 
+  Storages storages = Storages();
   @override
   void initState() {
     filteredList = dropdownValue.items;
     filteredListSeperate(filteredList);
+    storages.storage = storageList;
     super.initState();
   }
 
@@ -345,51 +355,67 @@ class _StoragePageState extends State<StoragePage>{
               ),
             ),
             actions: <Widget>[
-              ElevatedButton.icon(
-                icon: const Icon(Icons.delete_forever),
-                style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(Colors.red),
-                ),
-                onPressed: () {
-                  _deleteAlertDialog(itemModel);
-                },
-                label: const Text('Ürünü Sil'),
-              ),
-              TextButton(
-                child: const Text('İptal'),
-                onPressed: () {
-                  filteredListSeperate(filteredList);
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: const Text('Tamam'),
-                onPressed: () {
-                  if(updateController.text != ""){
-                    try {
-                      setState(() {
-                        if(int.parse(updateController.text) < 0){
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Stok sayısı negatif olamaz!"),)
-                          );
-                        }
-                        else {
-                          itemModel.itemCount = int.parse(updateController.text);
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.delete_forever),
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(Colors.red),
+                    ),
+                    onPressed: () {
+                      _deleteAlertDialog(itemModel);
+                    },
+                    label: const Text('Ürünü Sil'),
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                        child: const Text('İptal'),
+                        onPressed: () {
                           filteredListSeperate(filteredList);
                           Navigator.of(context).pop();
-                        }
+                        },
+                      ),
+                      TextButton(
+                        child: const Text('Tamam'),
+                        onPressed: () {
+                          if(updateController.text != ""){
+                            try {
+                              setState(() {
+                                if(int.parse(updateController.text) < 0){
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text("Stok sayısı negatif olamaz!"),)
+                                  );
+                                }
+                                else {
+                                  itemModel.itemCount = int.parse(updateController.text);
+                                  if(updateDropdownMenu != dropdownValue){
+                                    updateDropdownMenu.items.add(itemModel);
+                                    dropdownValue.items.remove(itemModel);
+                                    filteredList = dropdownValue.items;
+                                  }
+                                  filteredListSeperate(filteredList);
+                                  Navigator.of(context).pop();
+                                }
 
-                      });
-                      setState(() {
+                              });
+                              setState(() {
 
-                      });
-                    } catch(e) {
-                      print(e);
-                    }
+                              });
+                            } catch(e) {
+                              print(e);
+                            }
 
-                  }
-                },
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+
+                ],
               ),
+
             ],
           ),
         );
@@ -404,8 +430,8 @@ class _StoragePageState extends State<StoragePage>{
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 50,
+          Expanded(
+            flex: 1,
             child: TextButton(
               onPressed: () {
                 updateController.text = (toUpdateInt -= 5).toString();
@@ -413,8 +439,8 @@ class _StoragePageState extends State<StoragePage>{
               child: const Text("-5"),
             ),
           ),
-          SizedBox(
-            width: 50,
+          Expanded(
+            flex: 1,
             child: TextButton(
               onPressed: () {
                 updateController.text = (toUpdateInt -= 1).toString();
@@ -422,8 +448,8 @@ class _StoragePageState extends State<StoragePage>{
               child: const Text("-1"),
             ),
           ),
-          SizedBox(
-            width: 40,
+          Expanded(
+            flex: 1,
             child: TextField(
               controller: updateController,
               decoration: const InputDecoration(
@@ -435,8 +461,8 @@ class _StoragePageState extends State<StoragePage>{
               ],
             ),
           ),
-          SizedBox(
-            width: 50,
+          Expanded(
+            flex: 1,
             child: TextButton(
               onPressed: () {
                 updateController.text = (toUpdateInt += 1).toString();
@@ -444,8 +470,8 @@ class _StoragePageState extends State<StoragePage>{
               child: const Text("+1"),
             ),
           ),
-          SizedBox(
-            width: 50,
+          Expanded(
+            flex: 1,
             child: TextButton(
               onPressed: () {
                 updateController.text = (toUpdateInt += 5).toString();
@@ -463,9 +489,13 @@ class _StoragePageState extends State<StoragePage>{
     return SizedBox(
       child: Row(
         children: [
-          const Text("Depoyu değiştir:   "),
-          SizedBox(
-            width: 135,
+          const Expanded(
+            flex: 1,
+            child: Text("Depoyu değiştir:",
+            ),
+          ),
+          Expanded(
+            flex: 2,
             child: _updateStorageDropdown(itemModel),
           )
         ],
@@ -494,9 +524,7 @@ class _StoragePageState extends State<StoragePage>{
 
             setState(() {
               updateDropdownMenu = value;
-              updateDropdownMenu.items.add(itemModel);
-              dropdownValue.items.remove(itemModel);
-              filteredList = dropdownValue.items;
+
             });
 
           },
@@ -517,7 +545,147 @@ class _StoragePageState extends State<StoragePage>{
     );
   }
 
+  PopupItems selectedItem = PopupItems.name;
 
+  Widget _sortPopupMenu() {
+    return PopupMenuButton<PopupItems>(
+      initialValue: selectedItem,
+      icon: Icon(
+        Icons.sort
+      ),
+      onSelected: (PopupItems item) {
+        setState(() {
+          selectedItem = item;
+          sortList();
+        });
+      },
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<PopupItems>>[
+        PopupMenuItem<PopupItems>(
+          value: PopupItems.name,
+          child: Row(
+            children: const [
+              Icon(
+                Icons.abc,
+                color: Colors.black87,
+              ),
+              SizedBox(width: 10.0,),
+              Text('Ürün ismi alfabetik'),
+            ],
+          ),
+        ),
+        PopupMenuItem<PopupItems>(
+          value: PopupItems.barcode,
+          child: Row(
+            children: const [
+              ImageIcon(
+                AssetImage('assets/barcode.png'),
+                color: Colors.black87,
+              ),
+              SizedBox(width: 10.0,),
+              Text('Barkod numarası'),
+            ],
+          ),
+        ),
+        PopupMenuItem<PopupItems>(
+          value: PopupItems.expiredDateDown,
+          child: Row(
+            children: const [
+              Icon(
+                Icons.arrow_downward_outlined,
+                color: Colors.black87,
+              ),
+              SizedBox(width: 10.0,),
+              Expanded(child: Text('Son kullanma tarihi azalan')),
+            ],
+          ),
+        ),
+        PopupMenuItem<PopupItems>(
+          value: PopupItems.expiredDateUp,
+          child: Row(
+            children: const [
+              Icon(
+                Icons.arrow_upward_outlined,
+                color: Colors.black87,
+              ),
+              SizedBox(width: 10.0,),
+              Expanded(child: Text('Son kullanma tarihi artan')),
+            ],
+          ),
+        ),
+        PopupMenuItem<PopupItems>(
+          value: PopupItems.stockCountDown,
+          child: Row(
+            children: const [
+              Icon(
+                Icons.arrow_downward_outlined,
+                color: Colors.black87,
+              ),
+              SizedBox(width: 10.0,),
+              Expanded(child: Text('Stok sayısı azalan')),
+            ],
+          ),
+        ),
+        PopupMenuItem<PopupItems>(
+          value: PopupItems.stockCountUp,
+          child: Row(
+            children: const [
+              Icon(
+                Icons.arrow_upward_outlined,
+                color: Colors.black87,
+              ),
+              SizedBox(width: 10.0,),
+              Expanded(child: Text('Stok sayısı artan')),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
+  Future<void> _addItemAlertDialog() async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          scrollable: true,
+          title: const Text("Ürün Ekle"),
+          content: Column(
+            children: <Widget>[
+              TextFormField(
+                controller: null,
+                decoration: const InputDecoration(
+                  labelText: "Ürün adı",
+
+                ),
+              ),
+              TextFormField(
+                controller: null,
+                decoration: const InputDecoration(
+                  labelText: "Ürün barkodu",
+
+                ),
+              ),
+              TextFormField(
+                controller: null,
+                decoration: const InputDecoration(
+                  labelText: "Son kullanma tarihi",
+
+                ),
+              ),
+              TextFormField(
+                controller: null,
+                decoration: const InputDecoration(
+                  labelText: "Ürün adeti",
+                ),
+              ),
+
+            ],
+          )
+        );
+      }
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -526,7 +694,11 @@ class _StoragePageState extends State<StoragePage>{
         title: const Text("Depo Yönetimi", style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w300
-        ),),
+          ),
+        ),
+        actions: [
+          _sortPopupMenu()
+        ],
 
       ),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -582,10 +754,26 @@ class _StoragePageState extends State<StoragePage>{
             ),
           )
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          _addItemAlertDialog();
+        },
+        label: const Text('Ürün ekle'),
+        icon: const Icon(Icons.add),
+      ),
     );
   }
 
+  void save(StorageModel storageModel) async {
+    final sharedPreferences = await SharedPreferences.getInstance();
 
+    storages.storage.add(storageModel);
+
+    String itemJson = (dropdownValue.toJson()).toString();
+    sharedPreferences.setString(dropdownValue.storageName, itemJson);
+    //print(itemJson);
+
+  }
 
 
 
@@ -606,6 +794,7 @@ class _StoragePageState extends State<StoragePage>{
     setState(() {
       stockOutList = toFilterList.where((element) => element.itemCount == 0).toList();
       stockList = toFilterList.where((element) => element.itemCount != 0).toList();
+      sortList();
     });
   }
 
@@ -616,5 +805,41 @@ class _StoragePageState extends State<StoragePage>{
       }
       filteredListSeperate(filteredList);
     });
+  }
+
+
+  void sortList(){
+    switch(selectedItem){
+      case PopupItems.name: {
+        stockList.sort((a, b) => a.itemName.compareTo(b.itemName));
+        stockOutList.sort((a, b) => a.itemName.compareTo(b.itemName));
+        break;
+      }
+      case PopupItems.barcode: {
+        stockList.sort((a, b) => a.itemBarcode.compareTo(b.itemBarcode));
+        stockOutList.sort((a, b) => a.itemBarcode.compareTo(b.itemBarcode));
+        break;
+      }
+      case PopupItems.expiredDateDown: {
+        stockList.sort((a, b) => b.itemExpiredDate.compareTo(a.itemExpiredDate));
+        stockOutList.sort((a, b) => b.itemExpiredDate.compareTo(a.itemExpiredDate));
+        break;
+      }
+      case PopupItems.expiredDateUp: {
+        stockList.sort((a, b) => a.itemExpiredDate.compareTo(b.itemExpiredDate));
+        stockOutList.sort((a, b) => a.itemExpiredDate.compareTo(b.itemExpiredDate));
+        break;
+      }
+      case PopupItems.stockCountDown: {
+        stockList.sort((a, b) => b.itemCount.compareTo(a.itemCount));
+        break;
+      }
+      case PopupItems.stockCountUp: {
+        stockList.sort((a, b) => a.itemCount.compareTo(b.itemCount));
+        break;
+      }
+
+    }
+
   }
 }
